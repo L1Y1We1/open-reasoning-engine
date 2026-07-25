@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "open-reasoning-engine"
+version = "0.1.0"
+description = "A fully self-hosted reasoning and RAG engine built with LangGraph, LlamaIndex, Qdrant/Milvus, and Ollama."
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+license = { text = "MIT" }
+authors = [{ name = "L1Y1We1" }]
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.30,<1",
+  "pydantic-settings>=2.6,<3",
+  "python-multipart>=0.0.18,<1",
+  "langgraph>=0.4,<2",
+  "llama-index-core>=0.12,<0.15",
+  "llama-index-llms-ollama>=0.5,<1",
+  "llama-index-embeddings-huggingface>=0.5,<1",
+  "llama-index-vector-stores-qdrant>=0.6,<1",
+  "qdrant-client>=1.13,<2",
+  "sentence-transformers>=3.3,<6",
+  "pypdf>=5,<7",
+  "docx2txt>=0.9,<1",
+]
+
+[project.optional-dependencies]
+milvus = [
+  "llama-index-vector-stores-milvus>=0.7,<1",
+  "pymilvus>=2.5,<3",
+]
+dev = [
+  "httpx>=0.28,<1",
+  "pytest>=8.3,<10",
+  "pytest-cov>=6,<8",
+  "ruff>=0.9,<1",
+]
+
+[project.scripts]
+reasoning-engine = "reasoning_engine.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/reasoning_engine"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
