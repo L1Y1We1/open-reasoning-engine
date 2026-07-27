@@ -27,10 +27,10 @@ class ReasoningState(TypedDict, total=False):
 
 def _format_context(contexts: list[dict[str, Any]]) -> str:
     if not contexts:
-        return "（未检索到相关证据）"
+        return "(No relevant evidence was retrieved.)"
     blocks = []
     for index, item in enumerate(contexts, start=1):
-        blocks.append(f"[{index}] 来源: {item['source']}\n{item['text']}")
+        blocks.append(f"[{index}] Source: {item['source']}\n{item['text']}")
     return "\n\n".join(blocks)
 
 
@@ -65,14 +65,17 @@ class ReasoningEngine:
         rewritten = self.llm.complete(ANALYZE_PROMPT.format(question=state["question"]))
         return {
             "rewritten_question": rewritten or state["question"],
-            "reasoning_steps": ["分析问题并生成检索计划"],
+            "reasoning_steps": ["Analyzed the question and created a retrieval plan"],
         }
 
     def _retrieve(self, state: ReasoningState) -> dict[str, Any]:
         contexts = self.retriever.retrieve(state["rewritten_question"], state["top_k"])
         return {
             "contexts": [item.as_dict() for item in contexts],
-            "reasoning_steps": [*state.get("reasoning_steps", []), "从向量知识库检索证据"],
+            "reasoning_steps": [
+                *state.get("reasoning_steps", []),
+                "Retrieved evidence from the vector knowledge base",
+            ],
         }
 
     def _answer(self, state: ReasoningState) -> dict[str, Any]:
@@ -85,7 +88,10 @@ class ReasoningEngine:
         )
         return {
             "draft": draft,
-            "reasoning_steps": [*state.get("reasoning_steps", []), "基于证据生成带引用答案"],
+            "reasoning_steps": [
+                *state.get("reasoning_steps", []),
+                "Generated a cited answer from the evidence",
+            ],
         }
 
     def _reflect(self, state: ReasoningState) -> dict[str, Any]:
@@ -100,7 +106,10 @@ class ReasoningEngine:
         updates: dict[str, Any] = {
             "critique": critique,
             "should_retry": False,
-            "reasoning_steps": [*state.get("reasoning_steps", []), "校验答案与证据的一致性"],
+            "reasoning_steps": [
+                *state.get("reasoning_steps", []),
+                "Validated the answer against the evidence",
+            ],
         }
         if (
             critique.upper().startswith("RETRY:")
@@ -113,7 +122,7 @@ class ReasoningEngine:
                 updates["should_retry"] = True
                 updates["reasoning_steps"] = [
                     *updates["reasoning_steps"],
-                    "根据审校意见改写检索并重试",
+                    "Rewrote the retrieval query from validation feedback and retried",
                 ]
         return updates
 
@@ -136,7 +145,10 @@ class ReasoningEngine:
             )
         return {
             "answer": answer,
-            "reasoning_steps": [*state.get("reasoning_steps", []), "输出最终答案"],
+            "reasoning_steps": [
+                *state.get("reasoning_steps", []),
+                "Produced the final answer",
+            ],
         }
 
     def query(

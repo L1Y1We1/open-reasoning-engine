@@ -1,8 +1,10 @@
-# Reasoning Engine 示例知识
+# Reasoning Engine Sample Knowledge
 
-本项目的推理工作流包含五个阶段：问题分析、证据检索、答案生成、证据校验和最终输出。
-当校验器发现答案缺乏证据或没有回答问题时，工作流最多改写一次检索问题并重新检索。
+The reasoning workflow has five stages: question analysis, evidence retrieval, answer generation,
+evidence validation, and final output. When the validator finds that an answer lacks evidence or
+does not address the question, the workflow can rewrite the retrieval query and search again once.
 
-默认向量数据库是 Qdrant，默认生成模型通过 Ollama 运行 `qwen2.5:7b-instruct`，默认嵌入模型是
-`BAAI/bge-small-zh-v1.5`。所有组件均可在本地运行，不要求把文档发送到第三方 API。
-
+The default vector database is Qdrant. The default generation model is
+`qwen2.5:7b-instruct`, served through Ollama, and the default embedding model is
+`BAAI/bge-small-en-v1.5`. Every component can run locally, so documents do not need to be sent to
+a third-party API.

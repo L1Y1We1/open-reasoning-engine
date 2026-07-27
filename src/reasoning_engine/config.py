@@ -19,7 +19,7 @@ class AppSettings(BaseSettings):
     ollama_model: str = "qwen2.5:7b-instruct"
     ollama_request_timeout: float = 180.0
 
-    embedding_model: str = "BAAI/bge-small-zh-v1.5"
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
     embedding_dimension: int = 512
 
     vector_store: Literal["qdrant", "milvus"] = "qdrant"
@@ -44,4 +44,3 @@ class AppSettings(BaseSettings):
 @lru_cache
 def get_settings() -> AppSettings:
     return AppSettings()
-

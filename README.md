@@ -1,136 +1,140 @@
 # Open Reasoning Engine
 
-一套完全开源、可本地自建的 Reasoning Engine：
+A fully open-source Reasoning Engine that you can run on your own machine or server:
 
 ```text
-FastAPI → LangGraph 推理工作流 → LlamaIndex RAG → Qdrant / Milvus
-                           ↘ Ollama（Qwen / Llama）
+FastAPI -> LangGraph reasoning workflow -> LlamaIndex RAG -> Qdrant / Milvus
+                                   \-> Ollama (Qwen / Llama)
 ```
 
-默认组合是 **LangGraph + LlamaIndex + Qdrant + Ollama/Qwen**。文档、向量与模型推理都留在
-自己的机器或服务器上，不依赖闭源模型 API。
+The default stack is **LangGraph + LlamaIndex + Qdrant + Ollama/Qwen**. Documents, vectors, and
+model inference stay on your infrastructure, with no dependency on a closed model API.
 
-## 它不只是普通 RAG
+## More than basic RAG
 
-每次查询依次经过：
+Each query passes through the following workflow:
 
-1. 分析问题并生成独立检索问题；
-2. 从向量库检索证据；
-3. 严格基于证据生成带 `[1]` 引用的答案；
-4. 校验答案是否被证据支持；
-5. 若校验失败，改写检索问题并重试一次；
-6. 返回答案、来源、相关度与可观察的步骤摘要。
+1. Analyze the question and generate a standalone retrieval query.
+2. Retrieve evidence from the vector database.
+3. Generate an answer grounded in the evidence with `[1]`-style citations.
+4. Validate that the evidence supports the answer.
+5. If validation fails, rewrite the retrieval query and retry once.
+6. Return the answer, sources, relevance scores, and observable reasoning-step summaries.
 
-## 最快启动
+## Quick start
 
-要求：Docker Desktop / Docker Engine，建议至少 8 GB 内存。默认 7B 模型在仅 CPU 环境也能运行，
-但速度较慢。
+Requirements: Docker Desktop or Docker Engine and at least 8 GB of memory. The default 7B model
+can run on CPU-only systems, although inference will be slower.
 
 ```bash
 cp .env.example .env
 docker compose up -d --build
 ```
 
-第一次启动会下载 Qwen 模型和中文嵌入模型，需要几分钟。服务就绪后打开：
+The first startup downloads the Qwen model and the English embedding model, which can take a few
+minutes. Once the services are ready, open:
 
-- API 文档：<http://localhost:8000/docs>
-- 健康检查：<http://localhost:8000/health>
-- Qdrant 控制台：<http://localhost:6333/dashboard>
+- API documentation: <http://localhost:8000/docs>
+- Health check: <http://localhost:8000/health>
+- Qdrant dashboard: <http://localhost:6333/dashboard>
 
-Windows PowerShell 可用：
+On Windows PowerShell:
 
 ```powershell
 Copy-Item .env.example .env
 docker compose up -d --build
 ```
 
-## 导入文档
+## Ingest documents
 
-支持 `.txt`、`.md`、`.pdf`、`.docx`、`.csv`，单文件默认上限 25 MB。
+The API accepts `.txt`, `.md`, `.pdf`, `.docx`, and `.csv` files. The default per-file
+limit is 25 MB.
 
 ```bash
 curl -X POST http://localhost:8000/v1/documents \
   -F "files=@data/example.md"
 ```
 
-也可以在本机 Python 环境用命令行批量导入目录：
+You can also ingest a directory with the CLI from a local Python environment:
 
 ```bash
 pip install -e .
 reasoning-engine ingest ./data
 ```
 
-## 发起推理查询
+## Run a reasoning query
 
 ```bash
 curl -X POST http://localhost:8000/v1/query \
   -H "Content-Type: application/json" \
-  -d '{"question":"这个系统的推理流程是什么？"}'
+  -d '{"question":"What is the reasoning workflow used by this system?"}'
 ```
 
-响应示例：
+Example response:
 
 ```json
 {
-  "answer": "系统先分析问题并检索证据……[1]",
-  "rewritten_question": "Reasoning Engine 的完整推理工作流",
+  "answer": "The system analyzes the question and retrieves evidence before answering. [1]",
+  "rewritten_question": "Complete Open Reasoning Engine workflow",
   "citations": [
     {
       "index": 1,
       "source": "example.md",
-      "text": "本项目的推理工作流……",
+      "text": "The reasoning workflow has five stages...",
       "score": 0.82,
       "metadata": {}
     }
   ],
   "reasoning_steps": [
-    "分析问题并生成检索计划",
-    "从向量知识库检索证据",
-    "基于证据生成带引用答案",
-    "校验答案与证据的一致性",
-    "输出最终答案"
+    "Analyzed the question and created a retrieval plan",
+    "Retrieved evidence from the vector knowledge base",
+    "Generated a cited answer from the evidence",
+    "Validated the answer against the evidence",
+    "Produced the final answer"
   ],
   "retries": 0
 }
 ```
 
-命令行查询：
+CLI query:
 
 ```bash
-reasoning-engine ask "这个系统默认使用什么向量数据库？"
+reasoning-engine ask "Which vector database does this system use by default?"
 ```
 
-## 换模型
+## Change the model
 
-编辑 `.env`：
+Edit `.env`:
 
 ```dotenv
 OLLAMA_MODEL=qwen3:8b
 ```
 
-然后拉取并重启：
+Then pull the model and restart the API:
 
 ```bash
 docker compose run --rm model-pull
 docker compose restart api
 ```
 
-也可换成 Ollama 中的 Llama、DeepSeek-R1 蒸馏版等模型。模型名必须与本地 Ollama 标签一致。
+You can also use Llama, a DeepSeek-R1 distilled model, or another model available through Ollama.
+The model name must match a tag installed in your local Ollama instance.
 
-## 切换 Milvus
+## Switch to Milvus
 
-Milvus 更适合数据量大、需要横向扩展的环境。覆盖文件会自动为 API 镜像安装 Milvus 可选依赖：
+Milvus is better suited to large datasets and horizontally scalable deployments. The Compose
+override automatically installs the optional Milvus dependency in the API image:
 
 ```bash
 pip install -e ".[milvus]"
 docker compose -f docker-compose.yml -f docker-compose.milvus.yml up -d
 ```
 
-日常单机使用推荐保持默认 Qdrant。
+Qdrant remains the recommended default for everyday single-node use.
 
-## 本地开发
+## Local development
 
-Python 3.11–3.13：
+Python 3.11-3.13:
 
 ```bash
 python -m venv .venv
@@ -142,43 +146,46 @@ ruff check .
 uvicorn reasoning_engine.api:app --reload
 ```
 
-本地运行 API 时，把 `.env` 中的服务地址改成：
+When running the API directly on the host, update the service URLs in `.env`:
 
 ```dotenv
 OLLAMA_BASE_URL=http://localhost:11434
 QDRANT_URL=http://localhost:6333
 ```
 
-## 主要配置
+## Main configuration
 
-| 变量 | 默认值 | 说明 |
+| Variable | Default | Description |
 |---|---|---|
-| `OLLAMA_MODEL` | `qwen2.5:7b-instruct` | 生成与审校模型 |
-| `EMBEDDING_MODEL` | `BAAI/bge-small-zh-v1.5` | 本地嵌入模型 |
-| `VECTOR_STORE` | `qdrant` | `qdrant` 或 `milvus` |
-| `SIMILARITY_TOP_K` | `5` | 每轮证据数量 |
-| `MAX_RETRIES` | `1` | 审校失败后的最大重试数 |
-| `CHUNK_SIZE` | `700` | 文档分块大小 |
-| `CHUNK_OVERLAP` | `100` | 相邻分块重叠 |
+| `OLLAMA_MODEL` | `qwen2.5:7b-instruct` | Generation and validation model |
+| `EMBEDDING_MODEL` | `BAAI/bge-small-en-v1.5` | Local English embedding model |
+| `VECTOR_STORE` | `qdrant` | `qdrant` or `milvus` |
+| `SIMILARITY_TOP_K` | `5` | Number of evidence chunks per retrieval |
+| `MAX_RETRIES` | `1` | Maximum retries after failed validation |
+| `CHUNK_SIZE` | `700` | Document chunk size |
+| `CHUNK_OVERLAP` | `100` | Overlap between adjacent chunks |
 
-## 生产部署提醒
+## Production deployment notes
 
-- 反向代理 API，并增加身份认证、TLS、速率限制与请求体限制。
-- 不要把 Qdrant、Milvus 或 Ollama 端口公开到互联网；Compose 默认仅绑定本机。
-- 为向量库卷做快照和异地备份，固定经过验证的镜像版本。
-- 监控模型延迟、无证据回答比例、检索命中率和纠偏次数。
-- 修改嵌入模型或维度时使用新 collection 并重新导入，避免向量维度冲突。
+- Put the API behind a reverse proxy with authentication, TLS, rate limiting, and request-size
+  limits.
+- Do not expose Qdrant, Milvus, or Ollama ports to the public internet. The default Compose
+  configuration binds them to the local host only.
+- Snapshot and back up vector database volumes, and pin image versions that you have validated.
+- Monitor model latency, unsupported-answer rates, retrieval hit rates, and retry counts.
+- When changing the embedding model or vector dimensions, create a new collection and ingest the
+  documents again to avoid dimension conflicts.
 
-## 项目结构
+## Project structure
 
 ```text
 src/reasoning_engine/
-├── api.py          # FastAPI 接口
-├── engine.py       # LangGraph 推理与纠偏工作流
-├── retrieval.py    # LlamaIndex + Qdrant/Milvus
-├── llm.py          # Ollama 模型适配器
-├── config.py       # 环境配置
-└── cli.py          # 导入与查询命令行
+|-- api.py          # FastAPI interface
+|-- engine.py       # LangGraph reasoning and correction workflow
+|-- retrieval.py    # LlamaIndex + Qdrant/Milvus
+|-- llm.py          # Ollama model adapter
+|-- config.py       # Environment configuration
+`-- cli.py          # Ingestion and query CLI
 ```
 
 ## License

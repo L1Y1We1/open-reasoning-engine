@@ -1,53 +1,57 @@
-ANALYZE_PROMPT = """你是检索规划器。分析用户问题，生成一个适合语义检索的独立问题。
-保留专有名词、数字、时间与约束，不要回答问题。
-只输出改写后的问题，不要加前缀。
+ANALYZE_PROMPT = """You are a retrieval planner. Analyze the user's question and produce a
+standalone query suitable for semantic search. Preserve proper nouns, numbers, dates, and
+constraints. Do not answer the question.
+Return only the rewritten query with no prefix.
 
-用户问题：{question}
+User question: {question}
 """
 
-ANSWER_PROMPT = """你是一个严谨的开源知识库问答引擎。只能依据下方证据回答。
+ANSWER_PROMPT = """You are a rigorous open-source knowledge-base question-answering engine.
+Answer using only the evidence below.
 
-规则：
-1. 每个事实性结论后使用 [1]、[2] 形式标明证据编号。
-2. 证据不足时明确说“不知道”以及缺少什么，不得编造。
-3. 区分证据中的事实与合理推断；推断必须明确标注。
-4. 直接回答问题，使用与用户问题相同的语言。
+Rules:
+1. Cite every factual claim with an evidence number such as [1] or [2].
+2. If the evidence is insufficient, explicitly say that you do not know and explain what is
+   missing. Never fabricate information.
+3. Distinguish facts in the evidence from reasonable inferences, and clearly label inferences.
+4. Answer directly in the same language as the user's question.
 
-问题：{question}
-检索问题：{rewritten_question}
+Question: {question}
+Retrieval query: {rewritten_question}
 
-证据：
+Evidence:
 {context}
 """
 
-REFLECT_PROMPT = """你是答案审校器。检查草稿是否：
-- 回答了用户问题；
-- 所有事实均能被证据支持；
-- 引用编号存在且正确；
-- 没有将证据之外的信息伪装成事实。
+REFLECT_PROMPT = """You are an answer validator. Check whether the draft:
+- answers the user's question;
+- supports every factual claim with the evidence;
+- uses valid and accurate citation numbers; and
+- does not present information outside the evidence as fact.
 
-只输出一行：如果合格输出 PASS；否则输出 RETRY: 后跟更好的检索问题。
+Return exactly one line. Return PASS if the draft is valid. Otherwise, return RETRY: followed by
+a better retrieval query.
 
-用户问题：{question}
-当前检索问题：{rewritten_question}
-证据：
+User question: {question}
+Current retrieval query: {rewritten_question}
+Evidence:
 {context}
 
-草稿：
+Draft:
 {draft}
 """
 
-FINALIZE_PROMPT = """请依据审校意见修订答案。仍然只能使用给定证据，并保留 [1] 格式引用。
-若证据不足，明确说明不知道。不要提及“草稿”或“审校”。
+FINALIZE_PROMPT = """Revise the answer according to the validation feedback. Continue to use only
+the supplied evidence and retain citations in [1] format. If the evidence is insufficient,
+explicitly say that you do not know. Do not mention the draft or validation process.
 
-问题：{question}
-证据：
+Question: {question}
+Evidence:
 {context}
 
-当前答案：
+Current answer:
 {draft}
 
-审校意见：
+Validation feedback:
 {critique}
 """
-

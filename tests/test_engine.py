@@ -33,43 +33,56 @@ def settings() -> AppSettings:
 
 def test_pass_path_returns_citations() -> None:
     retriever = FakeRetriever()
-    llm = SequenceLLM(["默认向量数据库是什么", "默认是 Qdrant。[1]", "PASS"])
-    response = ReasoningEngine(llm, retriever, settings()).query("默认数据库？")
+    llm = SequenceLLM(
+        ["What is the default vector database?", "The default is Qdrant. [1]", "PASS"]
+    )
+    response = ReasoningEngine(llm, retriever, settings()).query(
+        "What is the default database?"
+    )
 
-    assert response.answer == "默认是 Qdrant。[1]"
+    assert response.answer == "The default is Qdrant. [1]"
     assert response.citations[0].source == "architecture.md"
     assert response.retries == 0
-    assert retriever.queries == ["默认向量数据库是什么"]
+    assert retriever.queries == ["What is the default vector database?"]
 
 
 def test_reflection_can_retry_once() -> None:
     retriever = FakeRetriever()
     llm = SequenceLLM(
         [
-            "数据库",
-            "不确定",
-            "RETRY: 默认使用哪个向量数据库",
-            "默认是 Qdrant。[1]",
+            "database",
+            "Uncertain",
+            "RETRY: Which vector database is used by default?",
+            "The default is Qdrant. [1]",
             "PASS",
         ]
     )
-    response = ReasoningEngine(llm, retriever, settings()).query("默认数据库？")
+    response = ReasoningEngine(llm, retriever, settings()).query(
+        "What is the default database?"
+    )
 
-    assert response.answer == "默认是 Qdrant。[1]"
+    assert response.answer == "The default is Qdrant. [1]"
     assert response.retries == 1
-    assert retriever.queries == ["数据库", "默认使用哪个向量数据库"]
+    assert retriever.queries == [
+        "database",
+        "Which vector database is used by default?",
+    ]
 
 
 def test_retry_budget_zero_finalizes_without_loop() -> None:
     retriever = FakeRetriever()
     llm = SequenceLLM(
-        ["数据库", "不确定", "RETRY: 默认数据库", "证据不足，无法确认。"]
+        [
+            "database",
+            "Uncertain",
+            "RETRY: default database",
+            "The evidence is insufficient to confirm the answer.",
+        ]
     )
     response = ReasoningEngine(llm, retriever, settings()).query(
-        "默认数据库？", max_retries=0
+        "What is the default database?", max_retries=0
     )
 
-    assert response.answer == "证据不足，无法确认。"
+    assert response.answer == "The evidence is insufficient to confirm the answer."
     assert response.retries == 0
     assert len(retriever.queries) == 1
-
